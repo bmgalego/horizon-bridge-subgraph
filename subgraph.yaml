@@ -1,0 +1,279 @@
+specVersion: 0.0.2
+description: Horizon Bridge Subgraph
+repository: https://github.com/bmgalego/horizon-bridge-subgraph
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: MultiSigWallet
+    network: mainnet
+    source:
+      address: "0x0c1310bbd93c6977fde20dc813cff8236ba1f0dd"
+      abi: MultiSigWallet
+      startBlock: 5336368
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - Wallet
+        - WalletEvent
+        - Transaction
+        - Confirmation
+        - Execution
+      abis:
+        - name: MultiSigWallet
+          file: ./abis/MultiSigWallet.json
+      eventHandlers:
+        - event: Submission(indexed uint256)
+          handler: handleSubmission
+        - event: Confirmation(indexed address,indexed uint256)
+          handler: handleConfirmation
+        - event: Execution(indexed uint256)
+          handler: handleExecution
+        - event: ExecutionFailure(indexed uint256)
+          handler: handleExecutionFailure
+      file: ./src/mappings/wallet.ts
+  - kind: ethereum/contract
+    name: Deposit
+    network: mainnet
+    source:
+      address: "0x8139d578f11638c78e16685eb2804c2a34482e41"
+      abi: Deposit
+      startBlock: 8967465
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - Withdraw
+      abis:
+        - name: Deposit
+          file: ./abis/Deposit.json
+      eventHandlers:
+        - event: Returned(indexed address,uint256)
+          handler: handleReturned
+      file: ./src/mappings/deposit.ts
+  - kind: ethereum/contract
+    name: ETHTokenManager
+    network: mainnet
+    source:
+      address: "0xbadb6897cf2e35aca73b6f37361a35eeb6f71637"
+      abi: TokenManager
+      startBlock: 5336387
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - BridgedToken
+      abis:
+        - name: TokenManager
+          file: ./abis/TokenManager.json
+        - name: BridgedToken
+          file: ./abis/BridgedToken.json
+      eventHandlers:
+        - event: TokenMapAck(indexed address,indexed address)
+          handler: handleTokenMapAck
+      file: ./src/mappings/token.ts
+  - kind: ethereum/contract
+    name: BUSDHmyManager
+    network: mainnet
+    source:
+      address: "0x05d11b7082d5634e0318d818a2f0cd381b371ea5"
+      abi: BUSDHmyManager
+      startBlock: 5336375
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - BridgedToken
+        - Mint
+        - Burn
+      abis:
+        - name: BUSDHmyManager
+          file: ./abis/BUSDHmyManager.json
+        - name: BUSD
+          file: ./abis/BUSD.json
+      eventHandlers:
+        - event: Minted(address,uint256,address,bytes32)
+          handler: handleMinted
+        - event: Burned(indexed address,indexed address,uint256,address)
+          handler: handleBurned
+      file: ./src/mappings/busd.ts
+  - kind: ethereum/contract
+    name: LINKHmyManager
+    network: mainnet
+    source:
+      address: "0xc0c7b147910ef11f6454dc1918ecde9a2b64a3a8"
+      abi: LINKHmyManager
+      startBlock: 5336381
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - BridgedToken
+        - Mint
+        - Burn
+      abis:
+        - name: LINKHmyManager
+          file: ./abis/LINKHmyManager.json
+        - name: LinkTokenInterface
+          file: ./abis/LinkTokenInterface.json
+      eventHandlers:
+        - event: Minted(address,uint256,address,bytes32)
+          handler: handleMinted
+        - event: Burned(indexed address,indexed address,uint256,address)
+          handler: handleBurned
+      file: ./src/mappings/link.ts
+  - kind: ethereum/contract
+    name: HRC20HmyManager
+    network: mainnet
+    source:
+      address: "0x38092d17d3641b6fa49668775948af71b430765e"
+      abi: HRC20HmyManager
+      startBlock: 7882766
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - Token
+        - Lock
+        - Unlock
+      abis:
+        - name: HRC20HmyManager
+          file: ./abis/HRC20HmyManager.json
+        - name: HRC20
+          file: ./abis/HRC20.json
+      eventHandlers:
+        - event: Locked(indexed address,indexed address,uint256,address)
+          handler: handleLocked
+        - event: Unlocked(address,uint256,address,bytes32)
+          handler: handleUnlocked
+      file: ./src/mappings/hrc20.ts
+  - kind: ethereum/contract
+    name: ERC20HmyManager
+    network: mainnet
+    source:
+      address: "0x2fbbcef71544c461edfc311f42e3583d5f9675d1"
+      abi: ERC20HmyManager
+      startBlock: 5336385
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - BridgedToken
+        - Mint
+        - Burn
+      abis:
+        - name: ERC20HmyManager
+          file: ./abis/ERC20HmyManager.json
+        - name: BridgedToken
+          file: ./abis/BridgedToken.json
+      eventHandlers:
+        - event: Minted(address,uint256,address,bytes32)
+          handler: handleMinted
+        - event: Burned(indexed address,indexed address,uint256,address)
+          handler: handleBurned
+      file: ./src/mappings/erc20.ts
+  - kind: ethereum/contract
+    name: ETHNFTTokenManager
+    network: mainnet
+    source:
+      address: "0x222eff50a13548e070aa48b7a0c124f41afbc68d"
+      abi: NFTTokenManager
+      startBlock: 7926921
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - BridgedNFT
+      abis:
+        - name: NFTTokenManager
+          file: ./abis/NFTTokenManager.json
+        - name: BridgedNTFToken
+          file: ./abis/BridgedNFTToken.json
+      eventHandlers:
+        - event: TokenMapAck(indexed address,indexed address)
+          handler: handleNFTTokenMapAck
+      file: ./src/mappings/token.ts
+  - kind: ethereum/contract
+    name: ERC721HmyManager
+    network: mainnet
+    source:
+      address: "0x39ec213272dda1f46424726bb20d82c3861568c0"
+      abi: ERC721HmyManager
+      startBlock: 7926895
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - BridgedNFT
+        - NFTMint
+        - NFTBurn
+      abis:
+        - name: ERC721HmyManager
+          file: ./abis/ERC721HmyManager.json
+        - name: BridgedNTFToken
+          file: ./abis/BridgedNFTToken.json
+      eventHandlers:
+        - event: Minted(address,uint256,address,bytes32)
+          handler: handleMinted
+        - event: Burned(indexed address,indexed address,uint256,address)
+          handler: handleBurned
+      file: ./src/mappings/erc721.ts
+  # BSC
+  - kind: ethereum/contract
+    name: BEP20HmyManager
+    network: mainnet
+    source:
+      address: "0x0de8e70e94f4761dc5baf5833d0f13eb9fd93620"
+      abi: ERC20HmyManager
+      startBlock: 10759596
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - BridgedToken
+        - Mint
+        - Burn
+      abis:
+        - name: ERC20HmyManager
+          file: ./abis/ERC20HmyManager.json
+        - name: BridgedToken
+          file: ./abis/BridgedToken.json
+      eventHandlers:
+        - event: Minted(address,uint256,address,bytes32)
+          handler: handleMinted
+        - event: Burned(indexed address,indexed address,uint256,address)
+          handler: handleBurned
+      file: ./src/mappings/bep20.ts
+  - kind: ethereum/contract
+    name: BSCTokenManager
+    network: mainnet
+    source:
+      address: "0x7678a9532bfc62e1f65f819b72ade0a395deaabf"
+      abi: TokenManager
+      startBlock: 10759612
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - BridgedToken
+      abis:
+        - name: TokenManager
+          file: ./abis/TokenManager.json
+        - name: BridgedToken
+          file: ./abis/BridgedToken.json
+      eventHandlers:
+        - event: TokenMapAck(indexed address,indexed address)
+          handler: handleTokenMapAck
+      file: ./src/mappings/bsctoken.ts
