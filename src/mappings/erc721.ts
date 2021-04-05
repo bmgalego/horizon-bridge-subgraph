@@ -70,6 +70,7 @@ export function handleMinted(event: Minted): void {
       .concat("-")
       .concat(event.logIndex.toString())
   );
+  mint.contract = event.address;
   mint.type = "NFT_MINT";
   mint.token = token.id;
   mint.manager = manager.id;
@@ -117,6 +118,7 @@ export function handleBurned(event: Burned): void {
       .concat("-")
       .concat(event.logIndex.toString())
   );
+  burn.contract = event.address;
   burn.type = "NFT_BURN";
   burn.asset = token.id;
   burn.token = token.id;

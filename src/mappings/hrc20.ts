@@ -110,6 +110,7 @@ export function handleLocked(event: Locked): void {
       .concat("-")
       .concat(event.logIndex.toString())
   );
+  lock.contract = event.address;
   lock.type = "LOCK";
   lock.asset = token.id;
   lock.token = token.id;
@@ -152,6 +153,7 @@ export function handleUnlocked(event: Unlocked): void {
       .concat("-")
       .concat(event.logIndex.toString())
   );
+  unlock.contract = event.address;
   unlock.type = "UNLOCK";
   unlock.asset = token.id;
   unlock.token = token.id;

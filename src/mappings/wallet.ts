@@ -65,6 +65,7 @@ export function handleSubmission(event: SubmissionEvent): void {
       .concat("-")
       .concat(event.logIndex.toString())
   );
+  walletEvent.contract = event.address;
 
   walletEvent.type = "SUBMISSION";
   walletEvent.wallet = wallet.id;
@@ -116,6 +117,7 @@ export function handleConfirmation(event: ConfirmationEvent): void {
       .concat("-")
       .concat(event.logIndex.toString())
   );
+  walletEvent.contract = event.address;
 
   walletEvent.type = "CONFIRMATION";
   walletEvent.wallet = wallet.id;
@@ -165,6 +167,7 @@ export function handleExecution(event: ExecutionEvent): void {
       .concat("-")
       .concat(event.logIndex.toString())
   );
+  walletEvent.contract = event.address;
 
   walletEvent.type = "EXECUTION";
   walletEvent.wallet = wallet.id;
@@ -203,6 +206,7 @@ export function handleExecutionFailure(event: ExecutionFailureEvent): void {
       .concat("-")
       .concat(event.logIndex.toString())
   );
+  walletEvent.contract = event.address;
 
   walletEvent.type = "EXECUTION_FAILED";
   walletEvent.wallet = wallet.id;
