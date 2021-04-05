@@ -8,7 +8,7 @@ export function handleReturned(event: Returned): void {
       .concat("-")
       .concat(event.logIndex.toString())
   );
-
+  withdraw.contract = event.address;
   withdraw.type = "WITHDRAW";
   withdraw.timestamp = event.block.timestamp;
   withdraw.blockNumber = event.block.number;

@@ -4,7 +4,7 @@ import { BridgedNTFToken as BridgedNFTContract } from "../../generated/ETHNFTTok
 import { TokenMapAck } from "../../generated/ETHTokenManager/TokenManager";
 import { TokenMapAck as NFTTokenMapAck } from "../../generated/ETHNFTTokenManager/NFTTokenManager";
 import { BridgedToken, BridgedNFT } from "../../generated/schema";
-import { ZERO } from "../helpers";
+import { createBridgedToken, ZERO } from "../helpers";
 
 export function createERC20Token(address: Address): BridgedToken {
   let instance = BridgedTokenContract.bind(address);
@@ -13,21 +13,13 @@ export function createERC20Token(address: Address): BridgedToken {
   let symbol = instance.try_symbol();
   let decimals = instance.try_decimals();
 
-  let token = new BridgedToken(address.toHexString());
-  token.network = "ETHEREUM";
-  token.address = address;
-  token.name = name.reverted ? "unknow" : name.value;
-  token.symbol = symbol.reverted ? "unknow" : symbol.value;
-  token.decimals = decimals.reverted
-    ? BigInt.fromI32(0)
-    : BigInt.fromI32(decimals.value);
-
-  token.eventsCount = ZERO;
-  token.mintsCount = ZERO;
-  token.burnsCount = ZERO;
-  token.totalLocked = ZERO;
-
-  token.save();
+  let token = createBridgedToken(
+    address,
+    "ETHEREUM",
+    name.reverted ? "unknow" : name.value,
+    symbol.reverted ? "unknow" : symbol.value,
+    decimals.reverted ? ZERO : BigInt.fromI32(decimals.value)
+  );
 
   return token;
 }

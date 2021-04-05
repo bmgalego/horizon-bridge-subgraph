@@ -2,7 +2,7 @@ import { Address, BigInt } from "@graphprotocol/graph-ts";
 import { BridgedToken as BridgedTokenContract } from "../../generated/BSCTokenManager/BridgedToken";
 import { TokenMapAck } from "../../generated/BSCTokenManager/TokenManager";
 import { BridgedToken } from "../../generated/schema";
-import { ZERO } from "../helpers";
+import { createBridgedToken, ZERO } from "../helpers";
 
 function createBEP20Token(address: Address): BridgedToken {
   let instance = BridgedTokenContract.bind(address);
@@ -11,21 +11,13 @@ function createBEP20Token(address: Address): BridgedToken {
   let symbol = instance.try_symbol();
   let decimals = instance.try_decimals();
 
-  let token = new BridgedToken(address.toHexString());
-  token.network = "BINANCE";
-  token.address = address;
-  token.name = name.reverted ? "unknow" : name.value;
-  token.symbol = symbol.reverted ? "unknow" : symbol.value;
-  token.decimals = decimals.reverted
-    ? BigInt.fromI32(0)
-    : BigInt.fromI32(decimals.value);
-
-  token.eventsCount = ZERO;
-  token.mintsCount = ZERO;
-  token.burnsCount = ZERO;
-  token.totalLocked = ZERO;
-
-  token.save();
+  let token = createBridgedToken(
+    address,
+    "BINANCE",
+    name.reverted ? "unknow" : name.value,
+    symbol.reverted ? "unknow" : symbol.value,
+    decimals.reverted ? ZERO : BigInt.fromI32(decimals.value)
+  );
 
   return token;
 }
