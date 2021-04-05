@@ -91,11 +91,11 @@ export function handleMinted(event: Minted): void {
   token.save();
 
   manager.eventsCount = manager.eventsCount.plus(ONE);
-  manager.mintsCount = manager.mintsCount.plus(ONE);
+  manager.nftMintsCount = manager.nftMintsCount.plus(ONE);
   manager.save();
 
   user.eventsCount = user.eventsCount.plus(ONE);
-  user.mintsCount = user.mintsCount.plus(ONE);
+  user.nftMintsCount = user.nftMintsCount.plus(ONE);
   user.save();
 }
 
@@ -141,10 +141,10 @@ export function handleBurned(event: Burned): void {
   token.save();
 
   manager.eventsCount = manager.eventsCount.plus(ONE);
-  manager.mintsCount = manager.mintsCount.plus(ONE);
+  manager.nftMintsCount = manager.nftMintsCount.plus(ONE);
   manager.save();
 
   user.eventsCount = user.eventsCount.plus(ONE);
-  user.mintsCount = user.mintsCount.plus(ONE);
+  user.nftMintsCount = user.nftMintsCount.plus(ONE);
   user.save();
 }

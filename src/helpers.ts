@@ -15,6 +15,9 @@ export function createManager(address: Address, wallet: Wallet): Manager {
 
   manager.mintsCount = ZERO;
   manager.burnsCount = ZERO;
+
+  manager.nftMintsCount = ZERO;
+  manager.nftBurnsCount = ZERO;
   manager.save();
 
   return manager;
@@ -45,6 +48,9 @@ export function getUser(address: Address): User {
 
     user.mintsCount = ZERO;
     user.burnsCount = ZERO;
+
+    user.nftMintsCount = ZERO;
+    user.nftBurnsCount = ZERO;
 
     user.save();
   }

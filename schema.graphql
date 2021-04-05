@@ -87,6 +87,11 @@ type Manager @entity {
   mintsCount: BigInt!
   burns: [Burn!]! @derivedFrom(field: "manager")
   burnsCount: BigInt!
+
+  nftMints: [NFTMint!]! @derivedFrom(field: "manager")
+  nftMintsCount: BigInt!
+  nftBurns: [NFTBurn!]! @derivedFrom(field: "manager")
+  nftBurnsCount: BigInt!
 }
 
 type User @entity {
@@ -104,6 +109,11 @@ type User @entity {
   mintsCount: BigInt!
   burns: [Burn!]! @derivedFrom(field: "user")
   burnsCount: BigInt!
+
+  nftMints: [NFTMint!]! @derivedFrom(field: "user")
+  nftMintsCount: BigInt!
+  nftBurns: [NFTBurn!]! @derivedFrom(field: "user")
+  nftBurnsCount: BigInt!
 }
 
 interface Asset {
