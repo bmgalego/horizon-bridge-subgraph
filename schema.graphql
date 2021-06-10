@@ -6,7 +6,10 @@ enum Network {
 
 type Wallet @entity {
   id: ID!
+
   managers: [Manager!]! @derivedFrom(field: "wallet")
+
+  assetsCount: BigInt!
 
   transactions: [Transaction!]! @derivedFrom(field: "wallet")
   transactionsCount: BigInt!
@@ -14,6 +17,11 @@ type Wallet @entity {
   transactionsExecutedCount: BigInt!
 
   events: [WalletEvent!]! @derivedFrom(field: "wallet")
+
+  eventsCount: BigInt!
+  usersCount: BigInt!
+
+  dayData: [WalletDayData!]! @derivedFrom(field: "wallet")
 }
 
 type Transaction @entity {
@@ -150,7 +158,11 @@ type Token implements Asset @entity {
   unlocks: [Unlock!]! @derivedFrom(field: "token")
   unlocksCount: BigInt!
 
-  totalLocked: BigInt!
+  totalLocked: BigDecimal!
+
+  volume: BigDecimal!
+
+  dayData: [TokenDayData!]! @derivedFrom(field: "token")
 }
 
 type BridgedToken implements Asset @entity {
@@ -173,7 +185,11 @@ type BridgedToken implements Asset @entity {
   burns: [Burn!]! @derivedFrom(field: "token")
   burnsCount: BigInt!
 
-  totalLocked: BigInt!
+  totalLocked: BigDecimal!
+
+  volume: BigDecimal!
+
+  dayData: [BridgedTokenDayData!]! @derivedFrom(field: "token")
 }
 
 # type NFT implements Asset @entity {
@@ -275,7 +291,7 @@ type Withdraw implements Event @entity {
   txHash: Bytes!
 
   recipient: String!
-  amount: BigInt!
+  amount: BigDecimal!
 }
 
 type Mint implements Event @entity {
@@ -296,7 +312,7 @@ type Mint implements Event @entity {
 
   recipient: Bytes!
   receiptId: Bytes!
-  amount: BigInt!
+  amount: BigDecimal!
 }
 
 type Burn implements Event @entity {
@@ -317,7 +333,7 @@ type Burn implements Event @entity {
 
   sender: Bytes!
   recipient: Bytes!
-  amount: BigInt!
+  amount: BigDecimal!
 }
 
 type Lock implements Event @entity {
@@ -338,7 +354,7 @@ type Lock implements Event @entity {
 
   sender: Bytes!
   recipient: Bytes!
-  amount: BigInt!
+  amount: BigDecimal!
 }
 
 type Unlock implements Event @entity {
@@ -359,7 +375,7 @@ type Unlock implements Event @entity {
 
   recipient: Bytes!
   receiptId: Bytes!
-  amount: BigInt!
+  amount: BigDecimal!
 }
 
 type NFTMint implements Event @entity {
@@ -402,4 +418,38 @@ type NFTBurn implements Event @entity {
   sender: Bytes!
   recipient: Bytes!
   tokenId: BigInt!
+}
+
+type WalletDayData @entity {
+  id: ID!
+  date: Int!
+  wallet: Wallet!
+  usersCount: BigInt!
+  newUsersCount: BigInt!
+  assetsCount: BigInt!
+  newAssetsCount: BigInt!
+  eventsCount: BigInt!
+  transactionsCount: BigInt!
+}
+
+type TokenDayData @entity {
+  id: ID!
+  date: Int!
+  token: Token!
+  volume: BigDecimal!
+  eventsCount: BigInt!
+  locksCount: BigInt!
+  unlocksCount: BigInt!
+  totalLocked: BigDecimal!
+}
+
+type BridgedTokenDayData @entity {
+  id: ID!
+  date: Int!
+  token: BridgedToken!
+  volume: BigDecimal!
+  eventsCount: BigInt!
+  mintsCount: BigInt!
+  burnsCount: BigInt!
+  totalLocked: BigDecimal!
 }

@@ -1,4 +1,4 @@
-import { Address, BigInt } from "@graphprotocol/graph-ts";
+import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import { BridgedNTFToken as BridgedNFTTokenContract } from "../../generated/ETHNFTTokenManager/BridgedNTFToken";
 import {
   ERC721HmyManager,
@@ -6,7 +6,14 @@ import {
   Burned,
 } from "../../generated/ERC721HmyManager/ERC721HmyManager";
 import { BridgedNFT, Manager, NFTMint, NFTBurn } from "../../generated/schema";
-import { createManager, getUser, getWallet, ONE, ZERO } from "../helpers";
+import {
+  createManager,
+  getUser,
+  getWallet,
+  getWalletDayData,
+  ONE,
+  ZERO,
+} from "../helpers";
 
 function getManager(address: Address): Manager {
   let manager = Manager.load(address.toHexString());
@@ -20,7 +27,11 @@ function getManager(address: Address): Manager {
   return manager as Manager;
 }
 
-function createERC721Token(address: Address, manager: Manager): BridgedNFT {
+function createERC721Token(
+  address: Address,
+  manager: Manager,
+  event: ethereum.Event
+): BridgedNFT {
   let instance = BridgedNFTTokenContract.bind(address);
 
   let name = instance.try_name();
@@ -40,30 +51,53 @@ function createERC721Token(address: Address, manager: Manager): BridgedNFT {
   token.mintsCount = ZERO;
   token.burnsCount = ZERO;
 
+  token.manager = manager.id;
   token.save();
+
+  let wallet = getWallet(Address.fromString(manager.wallet));
+  wallet.assetsCount = wallet.assetsCount.plus(ONE);
+  wallet.save();
+
+  let walletDayData = getWalletDayData(wallet, event);
+  walletDayData.assetsCount = wallet.assetsCount;
+  walletDayData.newAssetsCount = walletDayData.newAssetsCount.plus(ONE);
+  walletDayData.save();
 
   return token;
 }
 
-function getToken(address: Address, manager: Manager): BridgedNFT {
+function getToken(
+  address: Address,
+  manager: Manager,
+  event: ethereum.Event
+): BridgedNFT {
   let token = BridgedNFT.load(address.toHexString());
 
   if (token === null) {
-    return createERC721Token(address, manager);
+    return createERC721Token(address, manager, event);
   }
 
-  if (token.manager === null || token.manager !== manager.id) {
-    token.manager = manager.id;
-    token.save();
-  }
+  // if (token.manager === null || token.manager !== manager.id) {
+  //   token.manager = manager.id;
+  //   token.save();
+
+  //   let wallet = getWallet(Address.fromString(manager.wallet));
+  //   wallet.assetsCount = wallet.assetsCount.plus(ONE);
+  //   wallet.save();
+
+  //   let walletDayData = getWalletDayData(wallet, event);
+  //   walletDayData.newAssetsCount = walletDayData.newAssetsCount.plus(ONE);
+  //   walletDayData.save();
+  // }
 
   return token as BridgedNFT;
 }
 
 export function handleMinted(event: Minted): void {
-  let user = getUser(event.params.recipient);
   let manager = getManager(event.address);
-  let token = getToken(event.params.oneToken, manager);
+  let wallet = getWallet(Address.fromString(manager.wallet));
+  let user = getUser(event.params.recipient, wallet, event);
+  let token = getToken(event.params.oneToken, manager, event);
   let mint = new NFTMint(
     event.transaction.hash
       .toHexString()
@@ -109,9 +143,10 @@ function createTokenFilter(tokenId: BigInt): TokenFilter {
 }
 
 export function handleBurned(event: Burned): void {
-  let user = getUser(event.params.recipient);
   let manager = getManager(event.address);
-  let token = getToken(event.params.token, manager);
+  let wallet = getWallet(Address.fromString(manager.wallet));
+  let user = getUser(event.params.recipient, wallet, event);
+  let token = getToken(event.params.token, manager, event);
   let burn = new NFTBurn(
     event.transaction.hash
       .toHexString()

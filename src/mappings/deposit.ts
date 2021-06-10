@@ -16,6 +16,6 @@ export function handleReturned(event: Returned): void {
   withdraw.txHash = event.transaction.hash;
 
   withdraw.recipient = event.params.recipient.toHexString();
-  withdraw.amount = event.params.amount;
+  withdraw.amount = event.params.amount.toBigDecimal();
   withdraw.save();
 }

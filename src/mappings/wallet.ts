@@ -14,7 +14,7 @@ import {
   Manager,
   WalletEvent,
 } from "../../generated/schema";
-import { getWallet, ONE, ZERO } from "../helpers";
+import { getWallet, ONE, ZERO, getWalletDayData } from "../helpers";
 
 export function handleSubmission(event: SubmissionEvent): void {
   let wallet = getWallet(event.address);
@@ -29,7 +29,11 @@ export function handleSubmission(event: SubmissionEvent): void {
   }
 
   let transactionData = transactionDataResult.value;
-  let confirmationsRequired = walletInstance.required();
+  let confirmationsRequiredResult = walletInstance.try_required();
+
+  let confirmationsRequired = confirmationsRequiredResult.reverted
+    ? ONE
+    : confirmationsRequiredResult.value;
 
   let transaction = new Transaction(event.params.transactionId.toString());
 
@@ -78,6 +82,10 @@ export function handleSubmission(event: SubmissionEvent): void {
 
   wallet.transactionsCount = wallet.transactionsCount.plus(ONE);
   wallet.save();
+
+  let walletDayData = getWalletDayData(wallet, event);
+  walletDayData.transactionsCount = walletDayData.transactionsCount.plus(ONE);
+  walletDayData.save();
 }
 
 export function handleConfirmation(event: ConfirmationEvent): void {

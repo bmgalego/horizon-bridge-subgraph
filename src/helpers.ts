@@ -1,17 +1,27 @@
-import { Bytes, Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
+import {
+  Bytes,
+  Address,
+  BigInt,
+  BigDecimal,
+  ethereum,
+} from "@graphprotocol/graph-ts";
 import {
   BridgedToken,
+  BridgedTokenDayData,
   Burn,
   Lock,
   Manager,
   Mint,
   Token,
+  TokenDayData,
   Unlock,
   User,
   Wallet,
+  WalletDayData,
 } from "../generated/schema";
 
 export let ZERO = BigInt.fromI32(0);
+export let ZERO_BD = ZERO.toBigDecimal();
 export let ONE = BigInt.fromI32(1);
 
 export function createToken(
@@ -32,7 +42,9 @@ export function createToken(
   token.eventsCount = ZERO;
   token.locksCount = ZERO;
   token.unlocksCount = ZERO;
-  token.totalLocked = ZERO;
+  token.totalLocked = ZERO_BD;
+  token.volume = ZERO_BD;
+
   token.save();
 
   return token;
@@ -56,7 +68,8 @@ export function createBridgedToken(
   token.eventsCount = ZERO;
   token.mintsCount = ZERO;
   token.burnsCount = ZERO;
-  token.totalLocked = ZERO;
+  token.totalLocked = ZERO_BD;
+  token.volume = ZERO_BD;
 
   token.save();
 
@@ -86,6 +99,9 @@ export function getWallet(address: Address): Wallet {
   let wallet = Wallet.load(address.toHexString());
   if (wallet === null) {
     wallet = new Wallet(address.toHexString());
+    wallet.assetsCount = ZERO;
+    wallet.usersCount = ZERO;
+    wallet.eventsCount = ZERO;
     wallet.transactionsCount = ZERO;
     wallet.transactionsConfirmedCount = ZERO;
     wallet.transactionsExecutedCount = ZERO;
@@ -95,7 +111,11 @@ export function getWallet(address: Address): Wallet {
   return wallet as Wallet;
 }
 
-export function getUser(address: Address): User {
+export function getUser(
+  address: Address,
+  wallet: Wallet,
+  event: ethereum.Event
+): User {
   let user = User.load(address.toHexString());
 
   if (user === null) {
@@ -112,6 +132,14 @@ export function getUser(address: Address): User {
     user.nftBurnsCount = ZERO;
 
     user.save();
+
+    wallet.usersCount = wallet.usersCount.plus(ONE);
+    wallet.save();
+
+    let walletDayData = getWalletDayData(wallet, event);
+    walletDayData.usersCount = wallet.usersCount;
+    walletDayData.newUsersCount = walletDayData.newUsersCount.plus(ONE);
+    walletDayData.save();
   }
 
   return user as User;
@@ -159,12 +187,74 @@ interface IBurned extends ethereum.Event {
   params: IBurnedParams;
 }
 
+export function getWalletDayData(
+  wallet: Wallet,
+  event: ethereum.Event
+): WalletDayData {
+  let timestamp = event.block.timestamp.toI32();
+  let dayID = timestamp / 86400;
+  let dayStartTimestamp = dayID * 86400;
+  let walletDayID = wallet.id
+    .toString()
+    .concat("-")
+    .concat(dayID.toString());
+
+  let walletDayData = WalletDayData.load(walletDayID);
+  if (walletDayData === null) {
+    walletDayData = new WalletDayData(walletDayID);
+    walletDayData.date = dayStartTimestamp;
+    walletDayData.wallet = wallet.id;
+
+    walletDayData.eventsCount = ZERO;
+    walletDayData.usersCount = wallet.usersCount;
+    walletDayData.newUsersCount = ZERO;
+    walletDayData.assetsCount = wallet.assetsCount;
+    walletDayData.newAssetsCount = ZERO;
+    walletDayData.transactionsCount = ZERO;
+
+    walletDayData.save();
+  }
+
+  return walletDayData as WalletDayData;
+}
+
+function getBridgedTokenDayData(
+  token: BridgedToken,
+  event: ethereum.Event
+): BridgedTokenDayData {
+  let timestamp = event.block.timestamp.toI32();
+  let dayID = timestamp / 86400;
+  let dayStartTimestamp = dayID * 86400;
+  let tokenDayID = token.id
+    .toString()
+    .concat("-")
+    .concat(dayID.toString());
+
+  let tokenDayData = BridgedTokenDayData.load(tokenDayID);
+  if (tokenDayData === null) {
+    tokenDayData = new BridgedTokenDayData(tokenDayID);
+    tokenDayData.date = dayStartTimestamp;
+    tokenDayData.token = token.id;
+
+    tokenDayData.volume = ZERO_BD;
+    tokenDayData.eventsCount = ZERO;
+    tokenDayData.mintsCount = ZERO;
+    tokenDayData.burnsCount = ZERO;
+
+    tokenDayData.totalLocked = token.totalLocked;
+    tokenDayData.save();
+  }
+
+  return tokenDayData as BridgedTokenDayData;
+}
+
 export function createTokenMint<T extends IMinted>(
   token: BridgedToken,
   manager: Manager,
   event: T
 ): void {
-  let user = getUser(event.params.recipient);
+  let wallet = getWallet(Address.fromString(manager.wallet));
+  let user = getUser(event.params.recipient, wallet, event);
   let mint = new Mint(
     event.transaction.hash
       .toHexString()
@@ -177,7 +267,7 @@ export function createTokenMint<T extends IMinted>(
   mint.manager = manager.id;
   mint.asset = token.id;
   mint.user = user.id;
-  mint.amount = event.params.amount;
+  mint.amount = event.params.amount.toBigDecimal();
   mint.recipient = event.params.recipient;
   mint.receiptId = event.params.receiptId;
   mint.timestamp = event.block.timestamp;
@@ -188,7 +278,8 @@ export function createTokenMint<T extends IMinted>(
 
   token.eventsCount = token.eventsCount.plus(ONE);
   token.mintsCount = token.mintsCount.plus(ONE);
-  token.totalLocked = token.totalLocked.plus(event.params.amount);
+  token.totalLocked = token.totalLocked.plus(mint.amount);
+  token.volume = token.volume.plus(mint.amount);
   token.save();
 
   manager.eventsCount = manager.eventsCount.plus(ONE);
@@ -198,6 +289,20 @@ export function createTokenMint<T extends IMinted>(
   user.eventsCount = user.eventsCount.plus(ONE);
   user.mintsCount = user.mintsCount.plus(ONE);
   user.save();
+
+  wallet.eventsCount = wallet.eventsCount.plus(ONE);
+  wallet.save();
+
+  let dayData = getBridgedTokenDayData(token, event);
+  dayData.volume = dayData.volume.plus(mint.amount);
+  dayData.totalLocked = token.totalLocked;
+  dayData.eventsCount = dayData.eventsCount.plus(ONE);
+  dayData.mintsCount = dayData.mintsCount.plus(ONE);
+  dayData.save();
+
+  let walletDayData = getWalletDayData(wallet, event);
+  walletDayData.eventsCount = walletDayData.eventsCount.plus(ONE);
+  walletDayData.save();
 }
 
 export function createTokenBurn<T extends IBurned>(
@@ -205,7 +310,9 @@ export function createTokenBurn<T extends IBurned>(
   manager: Manager,
   event: T
 ): void {
-  let user = getUser(event.params.recipient);
+  let wallet = getWallet(Address.fromString(manager.wallet));
+
+  let user = getUser(event.params.recipient, wallet, event);
 
   let burn = new Burn(
     event.transaction.hash
@@ -219,7 +326,7 @@ export function createTokenBurn<T extends IBurned>(
   burn.token = token.id;
   burn.manager = manager.id;
   burn.user = user.id;
-  burn.amount = event.params.amount;
+  burn.amount = event.params.amount.toBigDecimal();
   burn.recipient = event.params.recipient;
   burn.sender = event.params.sender;
   burn.timestamp = event.block.timestamp;
@@ -230,7 +337,7 @@ export function createTokenBurn<T extends IBurned>(
 
   token.eventsCount = token.eventsCount.plus(ONE);
   token.burnsCount = token.burnsCount.plus(ONE);
-  token.totalLocked = token.totalLocked.minus(event.params.amount);
+  token.totalLocked = token.totalLocked.minus(burn.amount);
   token.save();
 
   manager.eventsCount = manager.eventsCount.plus(ONE);
@@ -240,6 +347,47 @@ export function createTokenBurn<T extends IBurned>(
   user.eventsCount = user.eventsCount.plus(ONE);
   user.mintsCount = user.mintsCount.plus(ONE);
   user.save();
+
+  wallet.eventsCount = wallet.eventsCount.plus(ONE);
+  wallet.save();
+
+  let dayData = getBridgedTokenDayData(token, event);
+  dayData.volume = dayData.volume.plus(burn.amount);
+  dayData.totalLocked = token.totalLocked;
+  dayData.eventsCount = dayData.eventsCount.plus(ONE);
+  dayData.burnsCount = dayData.burnsCount.plus(ONE);
+  dayData.save();
+
+  let walletDayData = getWalletDayData(wallet, event);
+  walletDayData.eventsCount = walletDayData.eventsCount.plus(ONE);
+  walletDayData.save();
+}
+
+function getTokenDayData(token: Token, event: ethereum.Event): TokenDayData {
+  let timestamp = event.block.timestamp.toI32();
+  let dayID = timestamp / 86400;
+  let dayStartTimestamp = dayID * 86400;
+  let tokenDayID = token.id
+    .toString()
+    .concat("-")
+    .concat(dayID.toString());
+
+  let tokenDayData = TokenDayData.load(tokenDayID);
+  if (tokenDayData === null) {
+    tokenDayData = new TokenDayData(tokenDayID);
+    tokenDayData.date = dayStartTimestamp;
+    tokenDayData.token = token.id;
+
+    tokenDayData.volume = ZERO_BD;
+    tokenDayData.eventsCount = ZERO;
+    tokenDayData.locksCount = ZERO;
+    tokenDayData.unlocksCount = ZERO;
+
+    tokenDayData.totalLocked = token.totalLocked;
+    tokenDayData.save();
+  }
+
+  return tokenDayData as TokenDayData;
 }
 
 export function createTokenLock<T extends ILocked>(
@@ -247,7 +395,9 @@ export function createTokenLock<T extends ILocked>(
   manager: Manager,
   event: T
 ): void {
-  let user = getUser(event.params.recipient);
+  let wallet = getWallet(Address.fromString(manager.wallet));
+
+  let user = getUser(event.params.recipient, wallet, event);
   let lock = new Lock(
     event.transaction.hash
       .toHexString()
@@ -260,7 +410,7 @@ export function createTokenLock<T extends ILocked>(
   lock.token = token.id;
   lock.manager = manager.id;
   lock.user = user.id;
-  lock.amount = event.params.amount;
+  lock.amount = event.params.amount.toBigDecimal();
   lock.recipient = event.params.recipient;
   lock.sender = event.params.sender;
   lock.timestamp = event.block.timestamp;
@@ -271,7 +421,8 @@ export function createTokenLock<T extends ILocked>(
 
   token.eventsCount = token.eventsCount.plus(ONE);
   token.locksCount = token.locksCount.plus(ONE);
-  token.totalLocked = token.totalLocked.plus(event.params.amount);
+  token.totalLocked = token.totalLocked.plus(lock.amount);
+  token.volume = token.volume.plus(lock.amount);
   token.save();
 
   manager.eventsCount = manager.eventsCount.plus(ONE);
@@ -281,6 +432,20 @@ export function createTokenLock<T extends ILocked>(
   user.eventsCount = user.eventsCount.plus(ONE);
   user.locksCount = user.locksCount.plus(ONE);
   user.save();
+
+  wallet.eventsCount = wallet.eventsCount.plus(ONE);
+  wallet.save();
+
+  let dayData = getTokenDayData(token, event);
+  dayData.volume = dayData.volume.plus(lock.amount);
+  dayData.totalLocked = token.totalLocked;
+  dayData.eventsCount = dayData.eventsCount.plus(ONE);
+  dayData.locksCount = dayData.locksCount.plus(ONE);
+  dayData.save();
+
+  let walletDayData = getWalletDayData(wallet, event);
+  walletDayData.eventsCount = walletDayData.eventsCount.plus(ONE);
+  walletDayData.save();
 }
 
 export function createTokenUnlock<T extends IUnlocked>(
@@ -288,7 +453,9 @@ export function createTokenUnlock<T extends IUnlocked>(
   manager: Manager,
   event: T
 ): void {
-  let user = getUser(event.params.recipient);
+  let wallet = getWallet(Address.fromString(manager.wallet));
+
+  let user = getUser(event.params.recipient, wallet, event);
   let unlock = new Unlock(
     event.transaction.hash
       .toHexString()
@@ -301,7 +468,7 @@ export function createTokenUnlock<T extends IUnlocked>(
   unlock.token = token.id;
   unlock.manager = manager.id;
   unlock.user = user.id;
-  unlock.amount = event.params.amount;
+  unlock.amount = event.params.amount.toBigDecimal();
   unlock.recipient = event.params.recipient;
   unlock.receiptId = event.params.receiptId;
   unlock.timestamp = event.block.timestamp;
@@ -312,7 +479,8 @@ export function createTokenUnlock<T extends IUnlocked>(
 
   token.eventsCount = token.eventsCount.plus(ONE);
   token.unlocksCount = token.unlocksCount.plus(ONE);
-  token.totalLocked = token.totalLocked.minus(event.params.amount);
+  token.totalLocked = token.totalLocked.minus(unlock.amount);
+  token.volume = token.volume.plus(unlock.amount);
   token.save();
 
   manager.eventsCount = manager.eventsCount.plus(ONE);
@@ -322,4 +490,18 @@ export function createTokenUnlock<T extends IUnlocked>(
   user.eventsCount = user.eventsCount.plus(ONE);
   user.unlocksCount = user.unlocksCount.plus(ONE);
   user.save();
+
+  wallet.eventsCount = wallet.eventsCount.plus(ONE);
+  wallet.save();
+
+  let dayData = getTokenDayData(token, event);
+  dayData.volume = dayData.volume.plus(unlock.amount);
+  dayData.totalLocked = token.totalLocked;
+  dayData.eventsCount = dayData.eventsCount.plus(ONE);
+  dayData.unlocksCount = dayData.unlocksCount.plus(ONE);
+  dayData.save();
+
+  let walletDayData = getWalletDayData(wallet, event);
+  walletDayData.eventsCount = walletDayData.eventsCount.plus(ONE);
+  walletDayData.save();
 }

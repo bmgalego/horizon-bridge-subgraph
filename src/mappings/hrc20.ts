@@ -1,4 +1,4 @@
-import { Address, BigInt } from "@graphprotocol/graph-ts";
+import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import {
   Locked,
   Unlocked,
@@ -12,6 +12,8 @@ import {
   createTokenLock,
   createTokenUnlock,
   getWallet,
+  getWalletDayData,
+  ONE,
   ZERO,
 } from "../helpers";
 
@@ -31,7 +33,11 @@ function getManager(address: Address): Manager {
   return manager as Manager;
 }
 
-function createHRC20Token(address: Address, manager: Manager): Token {
+function createHRC20Token(
+  address: Address,
+  manager: Manager,
+  event: ethereum.Event
+): Token {
   let instance = HRC20.bind(address);
 
   let name = instance.try_name();
@@ -46,10 +52,22 @@ function createHRC20Token(address: Address, manager: Manager): Token {
     decimals.reverted ? ZERO : BigInt.fromI32(decimals.value)
   );
 
+  let wallet = getWallet(Address.fromString(manager.wallet));
+  wallet.assetsCount = wallet.assetsCount.plus(ONE);
+  wallet.save();
+
+  let walletDayData = getWalletDayData(wallet, event);
+  walletDayData.newAssetsCount = walletDayData.newAssetsCount.plus(ONE);
+  walletDayData.save();
+
   return token;
 }
 
-function createONEToken(address: Address, manager: Manager): Token {
+function createONEToken(
+  address: Address,
+  manager: Manager,
+  event: ethereum.Event
+): Token {
   let token = createToken(
     address,
     "HARMONY",
@@ -57,21 +75,46 @@ function createONEToken(address: Address, manager: Manager): Token {
     "ONE",
     BigInt.fromI32(18)
   );
+
+  // token.manager = manager.id;
+  // token.save();
+
+  // let wallet = getWallet(Address.fromString(manager.wallet));
+  // wallet.assetsCount = wallet.assetsCount.plus(ONE);
+  // wallet.save();
+
+  // let walletDayData = getWalletDayData(wallet, event);
+  // walletDayData.newAssetsCount = walletDayData.newAssetsCount.plus(ONE);
+  // walletDayData.save();
+
   return token;
 }
 
-function getToken(address: Address, manager: Manager): Token {
+function getToken(
+  address: Address,
+  manager: Manager,
+  event: ethereum.Event
+): Token {
   let token = Token.load(address.toHexString());
 
   if (token === null) {
     return ONE_TOKEN.equals(address)
-      ? createONEToken(address, manager)
-      : createHRC20Token(address, manager);
+      ? createONEToken(address, manager, event)
+      : createHRC20Token(address, manager, event);
   }
 
-  if (token.manager === null || token.manager !== manager.id) {
+  if (token.manager === null) {
     token.manager = manager.id;
     token.save();
+
+    let wallet = getWallet(Address.fromString(manager.wallet));
+    wallet.assetsCount = wallet.assetsCount.plus(ONE);
+    wallet.save();
+
+    let walletDayData = getWalletDayData(wallet, event);
+    walletDayData.assetsCount = wallet.assetsCount;
+    walletDayData.newAssetsCount = walletDayData.newAssetsCount.plus(ONE);
+    walletDayData.save();
   }
 
   return token as Token;
@@ -84,7 +127,7 @@ export function handleLocked(event: Locked): void {
     return;
   }
   let manager = getManager(event.address);
-  let token = getToken(event.params.token, manager);
+  let token = getToken(event.params.token, manager, event);
   createTokenLock(token, manager, event);
 }
 
@@ -95,6 +138,6 @@ export function handleUnlocked(event: Unlocked): void {
     return;
   }
   let manager = getManager(event.address);
-  let token = getToken(event.params.hmyToken, manager);
+  let token = getToken(event.params.hmyToken, manager, event);
   createTokenUnlock(token, manager, event);
 }

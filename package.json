@@ -3,19 +3,15 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build-contract": "solc contracts/Gravity.sol --abi -o abis --overwrite && solc contracts/Gravity.sol --bin -o bin --overwrite",
-    "create": "graph create bmgalego/subgraphtest --node https://api.thegraph.com/deploy/",
     "create-local": "graph create bmgalego/bridge-subgraph --node http://127.0.0.1:8020",
     "remove-local": "graph remove bmgalego/bridge-subgraph --node http://127.0.0.1:8020",
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy": "graph deploy bmgalego/subgraphtest --ipfs https://api.thegraph.com/ipfs/ --node https://api.thegraph.com/deploy/",
-    "deploy-local": "graph deploy bmgalego/bridge-subgraph --ipfs http://localhost:5001 --node http://127.0.0.1:8020",
-    "create-hmy": "graph create bmgalego/bridge-subgraph --node https://graph.t.hmny.io:8020",
-    "deploy-hmy": "graph deploy bmgalego/bridge-subgraph --ipfs https://1bb6b861c45d.ngrok.io --node https://graph.t.hmny.io:8020"
+    "deploy": "graph deploy bmgalego/bridge-subgraph --ipfs https://api.thegraph.com/ipfs/ --node https://api.thegraph.com/deploy/",
+    "deploy-local": "graph deploy bmgalego/bridge-subgraph --ipfs http://localhost:5001 --node http://127.0.0.1:8020"
   },
   "devDependencies": {
-    "@graphprotocol/graph-cli": "^0.20.0",
-    "@graphprotocol/graph-ts": "^0.20.0"
+    "@graphprotocol/graph-cli": "0.20.0",
+    "@graphprotocol/graph-ts": "0.20.0"
   }
 }
